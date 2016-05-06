@@ -506,6 +506,13 @@ public class FongoConnection implements Connection {
         }
       }
       return (T) new Document("ok", 1.0).append("n", numDocsDeleted);
+    } else if (command.containsKey("listDatabases")) {
+      final List<String> databaseNames = fongo.getDatabaseNames();
+      final List<BsonDocument> documents = new ArrayList<BsonDocument>();
+      for (String databaseName : databaseNames) {
+        documents.add(new BsonDocument("name", new BsonString(databaseName)));
+      }
+      return (T) new BsonDocument("databases", FongoBsonArrayWrapper.bsonArrayWrapper(documents));
     } else {
       LOG.warn("Command not implemented: {}", command);
       throw new FongoException("Not implemented for command : " + JSON.serialize(dbObject(command)));
