@@ -5,7 +5,7 @@ import com.github.fakemongo.Fongo;
 import com.mongodb.ReadPreference;
 import com.mongodb.ServerAddress;
 import com.mongodb.async.SingleResultCallback;
-import com.mongodb.async.client.FongoMongoDatabase;
+import com.mongodb.async.client.FongoAsyncMongoDatabase;
 import com.mongodb.async.client.MockAsyncMongoClient;
 import com.mongodb.async.client.MongoClient;
 import com.mongodb.binding.AsyncConnectionSource;
@@ -45,11 +45,10 @@ public class FongoAsync implements AsyncOperationExecutor {
   public static final ServerVersion DEFAULT_SERVER_VERSION = new ServerVersion(3, 0);
 
   private final Fongo fongo;
-  private final Map<String, FongoMongoDatabase> dbMap = new ConcurrentHashMap<String, FongoMongoDatabase>();
+  private final Map<String, FongoAsyncMongoDatabase> dbMap = new ConcurrentHashMap<String, FongoAsyncMongoDatabase>();
   private final ServerAddress serverAddress;
   private final MongoClient mongo;
   private final String name;
-  private final ServerVersion serverVersion;
 
   /**
    * @param name Used only for a nice toString in case you have multiple instances
@@ -65,7 +64,6 @@ public class FongoAsync implements AsyncOperationExecutor {
   public FongoAsync(final String name, final ServerVersion serverVersion) {
     this.name = name;
     this.serverAddress = new ServerAddress(new InetSocketAddress(ServerAddress.defaultHost(), ServerAddress.defaultPort()));
-    this.serverVersion = serverVersion;
     this.mongo = createMongo();
     this.fongo = new Fongo(name, serverVersion);
   }
@@ -77,15 +75,15 @@ public class FongoAsync implements AsyncOperationExecutor {
    * @param databaseName name of the db.
    * @return the MongoDatabase associated to this name.
    */
-  public synchronized FongoMongoDatabase getDatabase(final String databaseName) {
+  public synchronized FongoAsyncMongoDatabase getDatabase(final String databaseName) {
     synchronized (dbMap) {
-      FongoMongoDatabase fongoMongoDatabase = dbMap.get(databaseName);
-      if (fongoMongoDatabase == null) {
-        fongoMongoDatabase = new FongoMongoDatabase(databaseName, mongo.getSettings().getCodecRegistry(), mongo.getSettings().getReadPreference(), mongo.getSettings().getWriteConcern(),
+      FongoAsyncMongoDatabase fongoAsyncMongoDatabase = dbMap.get(databaseName);
+      if (fongoAsyncMongoDatabase == null) {
+        fongoAsyncMongoDatabase = new FongoAsyncMongoDatabase(databaseName, mongo.getSettings().getCodecRegistry(), mongo.getSettings().getReadPreference(), mongo.getSettings().getWriteConcern(),
             mongo.getSettings().getReadConcern(), this);
-        dbMap.put(databaseName, fongoMongoDatabase);
+        dbMap.put(databaseName, fongoAsyncMongoDatabase);
       }
-      return fongoMongoDatabase;
+      return fongoAsyncMongoDatabase;
     }
   }
 
@@ -104,7 +102,7 @@ public class FongoAsync implements AsyncOperationExecutor {
    * @param dbName name of the database.
    */
   public void dropDatabase(String dbName) {
-    FongoMongoDatabase db = dbMap.remove(dbName);
+    FongoAsyncMongoDatabase db = dbMap.remove(dbName);
     if (db != null) {
       db.drop(new AwaitResultSingleResultCallback<Void>());
     }
@@ -148,7 +146,6 @@ public class FongoAsync implements AsyncOperationExecutor {
    */
   @Override
   public <T> void execute(final AsyncReadOperation<T> operation, final ReadPreference readPreference, SingleResultCallback<T> callback) {
-    // TODO ASYNC
     operation.executeAsync(new AsyncReadBinding() {
       @Override
       public ReadPreference getReadPreference() {
@@ -157,7 +154,6 @@ public class FongoAsync implements AsyncOperationExecutor {
 
       @Override
       public void getReadConnectionSource(SingleResultCallback<AsyncConnectionSource> callback) {
-        // TODO Async
         LOG.info("getReadConnectionSource() operation:" + operation.getClass());
         callback.onResult(new FongoAsyncConnectionSource(FongoAsync.this), null);
       }
@@ -187,11 +183,9 @@ public class FongoAsync implements AsyncOperationExecutor {
    */
   @Override
   public <T> void execute(final AsyncWriteOperation<T> operation, SingleResultCallback<T> callback) {
-    // TODO ASYNC
     operation.executeAsync(new AsyncWriteBinding() {
       @Override
       public void getWriteConnectionSource(final SingleResultCallback<AsyncConnectionSource> callback) {
-        // TODO ASYNC
         LOG.info("getWriteConnectionSource() operation:" + operation.getClass());
         callback.onResult(new FongoAsyncConnectionSource(FongoAsync.this), null);
       }
@@ -214,7 +208,7 @@ public class FongoAsync implements AsyncOperationExecutor {
   }
 
   public ServerVersion getServerVersion() {
-    return serverVersion;
+    return fongo.getServerVersion();
   }
 
   public Fongo getFongo() {

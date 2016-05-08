@@ -12,11 +12,9 @@ import org.bson.codecs.configuration.CodecRegistry;
 /**
  *
  */
-public class FongoMongoDatabase extends MongoDatabaseImpl {
-  private final FongoAsync fongoAsync;
+public class FongoAsyncMongoDatabase extends MongoDatabaseImpl {
 
-  public FongoMongoDatabase(String name, CodecRegistry codecRegistry, ReadPreference readPreference, WriteConcern writeConcern, ReadConcern readConcern, FongoAsync fongoAsync) {
+  public FongoAsyncMongoDatabase(String name, CodecRegistry codecRegistry, ReadPreference readPreference, WriteConcern writeConcern, ReadConcern readConcern, FongoAsync fongoAsync) {
     super(name, codecRegistry, readPreference, writeConcern, readConcern, fongoAsync);
-    this.fongoAsync = fongoAsync;
   }
 }
